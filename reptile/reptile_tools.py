@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-import models.shared as shared
 from chains.local_doc_qa import LocalDocQA
 from configs.model_config import (KB_ROOT_PATH, EMBEDDING_DEVICE,
                                   EMBEDDING_MODEL,
@@ -53,10 +52,7 @@ def save_data(file_name, data_str):
 
     vs_path = get_vs_path(KNOWLEDGE_BASE_ID)
     local_doc_qa = LocalDocQA()
-    llm_model_ins = shared.loaderLLM()
-    llm_model_ins.set_history_len(LLM_HISTORY_LEN)
     local_doc_qa.init_cfg(
-        llm_model=llm_model_ins,
         embedding_model=EMBEDDING_MODEL,
         embedding_device=EMBEDDING_DEVICE,
         top_k=VECTOR_SEARCH_TOP_K,
