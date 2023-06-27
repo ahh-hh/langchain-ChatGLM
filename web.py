@@ -157,12 +157,13 @@ def change_vs_name_input(vs_id, history):
             file_status = f"已加载知识库{vs_id}，请开始提问"
             return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), \
                    vs_path, history + [[None, file_status]], \
-                   gr.update(choices=local_doc_qa.list_file_from_vector_store(vs_path), value=[])
+                   gr.update(choices=local_doc_qa.list_file_from_vector_store(vs_path), value=[]), \
+                   gr.update(visible=True)
         else:
             file_status = f"已选择知识库{vs_id}，当前知识库中未上传文件，请先上传文件后，再开始提问"
             return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), \
                    vs_path, history + [[None, file_status]], \
-                   gr.update(choices=[], value=[])
+                   gr.update(choices=[], value=[]), gr.update(visible=True, value=[])
 
 
 def change_chunk_conent(mode, label_conent, history):
@@ -183,7 +184,7 @@ def add_vs_name(vs_name, chatbot):
         vs_status = "与已有知识库名称冲突，请重新选择其他名称后提交"
         chatbot = chatbot + [[None, vs_status]]
         return gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), gr.update(
-            visible=False), chatbot
+            visible=False), chatbot, gr.update(visible=False)
     else:
         # 新建上传文件存储路径
         if not os.path.exists(os.path.join(KB_ROOT_PATH, vs_name, "content")):
@@ -194,7 +195,7 @@ def add_vs_name(vs_name, chatbot):
         vs_status = f"""已新增知识库"{vs_name}",将在上传文件并载入成功后进行存储。请在开始对话前，先完成文件上传。 """
         chatbot = chatbot + [[None, vs_status]]
         return gr.update(visible=True, choices=get_vs_list(), value=vs_name), gr.update(
-            visible=False), gr.update(visible=False), gr.update(visible=True), chatbot
+            visible=False), gr.update(visible=False), gr.update(visible=True), chatbot, gr.update(visible=True)
 
 
 # 自动化加载固定文件间中文件
@@ -239,6 +240,22 @@ def delete_file(vs_id, files_to_delete, chatbot):
     logger.info(",".join(files_to_delete)+vs_status)
     chatbot = chatbot + [[None, vs_status]]
     return gr.update(choices=local_doc_qa.list_file_from_vector_store(vs_path), value=[]), chatbot
+
+
+def delete_vs(vs_id, chatbot):
+    try:
+        shutil.rmtree(os.path.join(KB_ROOT_PATH, vs_id))
+        status = f"成功删除知识库{vs_id}"
+        logger.info(status)
+        chatbot = chatbot + [[None, status]]
+        return gr.update(choices=get_vs_list(), value=get_vs_list()[0]), gr.update(visible=True), gr.update(visible=True), \
+               gr.update(visible=False), chatbot, gr.update(visible=False)
+    except Exception as e:
+        logger.error(e)
+        status = f"删除知识库{vs_id}失败"
+        chatbot = chatbot + [[None, status]]
+        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), \
+               gr.update(visible=True), chatbot, gr.update(visible=True)
 
 block_css = """.importantButton {
     background: linear-gradient(45deg, #7e0570,#5d1c99, #6e00ff) !important;
@@ -302,6 +319,7 @@ with gr.Blocks(css=block_css, theme=gr.themes.Default(**default_theme_args)) as 
                                         interactive=True,
                                         visible=False)
                 vs_add = gr.Button(value="添加至知识库选项", visible=False)
+                vs_delete = gr.Button("删除本知识库", visible=True)
                 file2vs = gr.Column(visible=True)
                 with file2vs:
                     # load_vs = gr.Button("加载知识库")
@@ -335,10 +353,13 @@ with gr.Blocks(css=block_css, theme=gr.themes.Default(**default_theme_args)) as 
                                     outputs=select_vs)
                 vs_add.click(fn=add_vs_name,
                                 inputs=[vs_name, chatbot],
-                                outputs=[select_vs, vs_name, vs_add, file2vs, chatbot])
+                                outputs=[select_vs, vs_name, vs_add, file2vs, chatbot, vs_delete])
+                vs_delete.click(fn=delete_vs,
+                                    inputs=[select_vs, chatbot],
+                                    outputs=[select_vs, vs_name, vs_add, file2vs, chatbot, vs_delete])
                 select_vs.change(fn=change_vs_name_input,
                                     inputs=[select_vs, chatbot],
-                                    outputs=[vs_name, vs_add, file2vs, vs_path, chatbot, files_to_delete])
+                                    outputs=[vs_name, vs_add, file2vs, vs_path, chatbot, files_to_delete, vs_delete])
                 load_file_button.click(get_vector_store,
                                         show_progress=True,
                                         inputs=[select_vs, files, sentence_size, chatbot, vs_add, vs_add],
