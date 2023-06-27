@@ -1,9 +1,10 @@
-from tools import custom_log, save_data
-import requests
+import sys
+from reptile_tools import custom_log, save_data
 from requests_html import HTMLSession
+import requests
 import datetime
-import time
 
+sys.path.append("..")
 origin = "https://xueqiu.com"
 url = origin + "/statuses/hot/listV2.json"
 params = {"since_id": -1, "max_id": -1, "size": 15}
@@ -41,7 +42,7 @@ def get_data(target):
     result += post_from + title + content
 
 
-def get_list():
+def grab_xueqiu():
     global params
     response = requests.get(url, params=params, headers=headers)
     if response.status_code != 200:
@@ -57,9 +58,6 @@ def get_list():
                 get_data(item["original_status"]["target"])
         if not is_day_before_yesterday:
             params["max_id"] = response_content["next_max_id"]
-            get_list()
+            grab_xueqiu()
         else:
             save_data('雪球热贴' + yesterday_datetime.strftime("%Y-%m-%d"), result)
-
-
-get_list()

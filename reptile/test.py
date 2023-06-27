@@ -1,6 +1,3 @@
-import sys
-sys.path.append("..")
-from reptile_tools import save_data
+from xueqiu import grab_xueqiu
 
-txt = "量化基金可以分为以下三种：\n1、指数增强型基金，它希望能够提供高于标的指数回报水平的投资业绩。\n2、绝对收益型量化基金，它通过做多和做空对冲市场的风险，以期获得较稳定的绝对收益。\n3、主动量化基金，它跟主动型基金的概念相似，通过主动管理去获取超额回报。\n投资理念： 严格风险控制，追求稳健收益。"
-save_data('雪球热贴2023-06-18.txt', txt)
+grab_xueqiu()
