@@ -85,9 +85,10 @@ def get_answer(query, vs_path, history, mode, score_threshold=VECTOR_SEARCH_SCOR
             yield history + [[query,
                               "请选择知识库后进行测试，当前未选择知识库。"]], ""
     else:
-        for answer_result in local_doc_qa.llm.generatorAnswer(prompt=query, history=history,
-                                                              streaming=streaming):
+        answer_result_stream_result = local_doc_qa.llm_model_chain(
+            {"prompt": query, "history": history, "streaming": streaming})
 
+        for answer_result in answer_result_stream_result['answer_result_stream']:
             resp = answer_result.llm_output["answer"]
             history = answer_result.history
             history[-1][-1] = resp + (
@@ -105,13 +106,14 @@ def init_model(llm_model: str = 'chat-glm-6b', embedding_model: str = 'text2vec'
     args_dict.update(model=llm_model)
     shared.loaderCheckPoint = LoaderCheckPoint(args_dict)
     llm_model_ins = shared.loaderLLM()
-    llm_model_ins.set_history_len(LLM_HISTORY_LEN)
 
     try:
         local_doc_qa.init_cfg(llm_model=llm_model_ins,
                               embedding_model=embedding_model)
-        generator = local_doc_qa.llm.generatorAnswer("你好")
-        for answer_result in generator:
+        answer_result_stream_result = local_doc_qa.llm_model_chain(
+            {"prompt": "你好", "history": [], "streaming": False})
+
+        for answer_result in answer_result_stream_result['answer_result_stream']:
             print(answer_result.llm_output)
         reply = """模型已成功加载，可以开始对话，或从右侧选择模式后开始对话"""
         logger.info(reply)
@@ -143,7 +145,7 @@ def init_model(llm_model: str = 'chat-glm-6b', embedding_model: str = 'text2vec'
 #     return history + [[None, model_status]]
 
 
-def get_vector_store(vs_id, files, sentence_size, history, one_conent, one_content_segmentation):
+def get_vector_store(local_doc_qa, vs_id, files, sentence_size, history, one_conent, one_content_segmentation):
     vs_path = os.path.join(KB_ROOT_PATH, vs_id, "vector_store")
     filelist = []
     if not os.path.exists(os.path.join(KB_ROOT_PATH, vs_id, "content")):
@@ -455,6 +457,8 @@ with st.sidebar:
             cols = st.columns([12, 10])
             kb_name = cols[0].text_input(
                 '新知识库名称', placeholder='新知识库名称', label_visibility='collapsed')
+            if 'kb_name' not in st.session_state:
+                st.session_state.kb_name = kb_name
             cols[1].button('新建知识库', on_click=on_new_kb)
             vs_path = st.selectbox(
                 '选择知识库', vs_list, on_change=on_vs_change, key='vs_path')
@@ -466,7 +470,7 @@ with st.sidebar:
             top_k = st.slider('向量匹配数量', 1, 20, VECTOR_SEARCH_TOP_K)
             history_len = st.slider(
                 'LLM对话轮数', 1, 50, LLM_HISTORY_LEN)  # 也许要跟知识库分开设置
-            local_doc_qa.llm.set_history_len(history_len)
+            # local_doc_qa.llm.set_history_len(history_len)
             chunk_conent = st.checkbox('启用上下文关联', False)
             st.text('')
             # chunk_conent = st.checkbox('分割文本', True) # 知识库文本分割入库
