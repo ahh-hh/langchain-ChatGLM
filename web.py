@@ -91,9 +91,15 @@ def init_model():
         generator = local_doc_qa.llm.generatorAnswer("你好")
         for answer_result in generator:
             print(answer_result.llm_output)
-        reply = f"已加载知识库{base_vs}，请开始提问"
-        logger.info(reply)
-        return reply
+        vs_path = os.path.join(KB_ROOT_PATH, base_vs, "vector_store")
+        if "index.faiss" in os.listdir(vs_path):
+            reply = f"已加载知识库{base_vs}，请开始提问"
+            logger.info(reply)
+            return reply
+        else:
+            reply = f"已选择知识库{base_vs}，当前知识库中未上传文件，请先上传文件后，再开始提问"
+            logger.info(reply)
+            return reply
     except Exception as e:
         logger.error(e)
         reply = """模型未成功加载，请到页面左上角"模型配置"选项卡中重新选择后点击"加载模型"按钮"""
@@ -387,9 +393,9 @@ with gr.Blocks(css=block_css, theme=gr.themes.Default(**default_theme_args)) as 
     )
 
 (demo
- .queue(concurrency_count=3)
- .launch(server_name='0.0.0.0',
-         server_port=6006,
-         show_api=False,
-         share=False,
-         inbrowser=False))
+    .queue(concurrency_count=3)
+    .launch(server_name='0.0.0.0',
+            server_port=6006,
+            show_api=False,
+            share=False,
+            inbrowser=False))
