@@ -85,11 +85,12 @@ def init_model():
     args_dict = vars(args)
     shared.loaderCheckPoint = LoaderCheckPoint(args_dict)
     llm_model_ins = shared.loaderLLM()
-    llm_model_ins.set_history_len(LLM_HISTORY_LEN)
     try:
         local_doc_qa.init_cfg(llm_model=llm_model_ins)
-        generator = local_doc_qa.llm.generatorAnswer("你好")
-        for answer_result in generator:
+        answer_result_stream_result = local_doc_qa.llm_model_chain(
+            {"prompt": "你好", "history": [], "streaming": False})
+
+        for answer_result in answer_result_stream_result['answer_result_stream']:
             print(answer_result.llm_output)
         vs_path = os.path.join(KB_ROOT_PATH, base_vs, "vector_store")
         if "index.faiss" in os.listdir(vs_path):
